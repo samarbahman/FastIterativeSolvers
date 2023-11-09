@@ -5,9 +5,6 @@ clear;
 close all;
 %% CG Algorithm
 
-% Start recording the run time
-tic;
-
 % Read the MCSR matrix data from a text file
 T = readtable('cg_test_msr.txt');
 T = table2cell(T);
@@ -20,50 +17,45 @@ b = mcsr(data,x_known);     % desired b
 % Initialization
 x = zeros(n,1);
 r = b - mcsr(data,x);
-r0Norm = l2Norm(r);
+r0Norm = norm(r);
 p = r;
 
+% Start recording the run time
+tic;
+
 % Algorithm
-for i = 1:100000
-    rho = dotProduct(r, r);
+tol = 1e-8;
+criteria = tol + 1;
+itnum = 1;
+while criteria > tol
+    rho = dot(r, r);
     Ap = mcsr(data,p);
-    alph = rho/dotProduct(Ap, p);
+    alph = rho/dot(Ap, p);
     x = x + alph*p;
-    %x_final(:,i) = x;
-    %e(:,i) = x - x_known;
     e = x - x_known;
-    Ae(:,i) = mcsr(data,e);
-    normeA(i) = sqrt(dotProduct(Ae, e));
+    Ae = mcsr(data,e);
+    normeA(itnum) = sqrt(dot(Ae, e));
     r = r - alph*Ap;
-    normr(i) = sqrt(dotProduct(r, r));
-    if l2Norm(r)/r0Norm < 1e-8
-        break;
-    end
-    bet = dotProduct(r, r)/rho;
+    normr(itnum) = norm(r);
+    criteria = norm(r)/r0Norm;
+    bet = dot(r, r)/rho;
     p = r + bet*p;
+    itnum = itnum + 1;
 end
-
-% Save data
-
-save("norm.mat","normeA","normr")
 
 % Finish recording the runtime
 toc;
-%% Dot Product Function
-function dotProduct = dotProduct(vec1,vec2)
-if size(vec1,1) == size(vec2,1)
-    for i = 1:size(vec1,1)
-        product(i) = vec1(i)*vec2(i);
-    end
-else
-    disp("Dimension Mismatch")
-end
-dotProduct = sum(product);
-end
-%% Euclidean Norm Function 
-function l2Norm = l2Norm(vec)
-l2Norm = sqrt(dotProduct(vec,vec));
-end
+
+% Plot Results
+i = 1:1:itnum-1;
+slg = semilogy(i,normeA,i,normr);
+slg(1).LineWidth = 1;
+slg(1).Color = "magenta";
+slg(2).Color = "cyan";
+slg(2).LineStyle = ":";
+grid on
+xlabel('Number of Iterations','Interpreter','latex')
+legend('$||e||_A$','$||r||_2$','Interpreter','latex')
 %% MCSR Storage Format Function
 function y = mcsr(data, x)
 n = data(1,1);

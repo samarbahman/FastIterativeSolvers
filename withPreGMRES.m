@@ -16,7 +16,7 @@ b = mcsr(data,x_known);     % desired b
 
 % Initialization
 x0 = zeros(n,1);
-m = 600; 
+m = 600;                     % change m here: 30, 50, 100, 600
 tol = 1e-8;
 
 % Preconditioned GMRES Method
@@ -29,14 +29,10 @@ switch preCond
         for i = 1:n
             M(i,i) = 1;
         end
-%         [x, e] = gmRES(data, M, b, x0, m, tol);
-%         save("e_none.mat","e")
     case 1                              % Jacobi Preconditioner
         for i = 1:n
             M(i,i) = VM(i);
         end
-%         [x, e] = gmRES(data, M, b, x0, m, tol);
-%         save("e_Jacobi.mat","e")
     case 2                              % Gauss-Seidel Preconditioner
         for i = 1:n
             M(i,i) = VM(i);
@@ -51,8 +47,6 @@ switch preCond
                 end
             end
         end
-%         [x, e] = gmRES(data, M, b, x0, m, tol);
-%         save("e_GS.mat","e")
 end
 
 % Restarted GMRES Method
@@ -65,16 +59,13 @@ switch reStart
     case 1                                  % Full GMRES Method
         [x, e] = gmRES(data, M, b, x0, m, tol);
     case 2                                  % Restarted GMRES Method
-        maxIter = 1000;
-        for iter = 1:maxIter
+        criteria = tol + 1;
+        itnum = 1;
+        while criteria > tol
             [x, e] = gmRES(data, M, b, x0, m, tol);
-            disp(iter)
-            disp(e)
             x0 = x;
-            if e < tol
-                disp('Converged!');
-                break;
-            end
+            criteria = e;
+            itnum = itnum + 1;
         end
 end
 
@@ -83,16 +74,16 @@ toc;
 %% GMRES Algorithm Function
 function [x, e] = gmRES(data, M, b, x, m, tol)
 r0 = b - mcsr(data,x);
-res = backSub(M, b);
-r = backSub(M, r0);
-v(:,1) = r/l2Norm(r);
+res = M\b;
+r = M\r0;
+v(:,1) = r/norm(r);
 
 % Initialization
 sn = zeros(m, 1);
 cs = zeros(m, 1);
 e1 = zeros(m+1, 1);
 e1(1) = 1;
-g = l2Norm(r)* e1;
+g = norm(r)* e1;
     
 for k = 1:m
 
@@ -105,7 +96,7 @@ for k = 1:m
     % Updating the Vector
     g(k + 1) = -sn(k) * g(k);
     g(k) = cs(k) * g(k);
-    error = abs(g(k + 1)) / l2Norm(res);
+    error = abs(g(k + 1)) / norm(res);
     e(k) = error;
     
     % Tolerance Condition
@@ -115,19 +106,19 @@ for k = 1:m
 end
 
 % Final Result
-y = backSub(h(1:k, 1:k), g(1:k));
+y = h(1:k, 1:k)\g(1:k);
 x = x + v(:, 1:k) * y;
 end
 %% Arnoldi Algorithm
 function [h, v] = arnoldi(data, M, v, k)
 z = mcsr(data,v(:,k));
-w = backSub(M, z);
+w = M\z;
 
 for i = 1:k     
     h(i) = w' * v(:, i);
     w = w - h(i) * v(:, i);
 end
-h(k + 1) = l2Norm(w);
+h(k + 1) = norm(w);
 v = w / h(k + 1);
 end
 %% QR Factorization Function
@@ -164,26 +155,5 @@ for i = 1:n
     for j = i1:i2
         y(i) = y(i) + VM(j) * x(JM(j));     % Calculating the lower half with CRS format
     end
-end
-end
-%% Dot Product Function
-function dotProduct = dotProduct(vec1,vec2)
-for i = 1:numel(vec1)
-    product(i) = vec1(i)*vec2(i);
-end
-dotProduct = sum(product);
-end
-%% Euclidean Norm Function 
-function l2Norm = l2Norm(vec)
-l2Norm = sqrt(dotProduct(vec,vec));
-end
-%% Backwards Substitution Function
-function x = backSub(U, y)
-n = size(U, 1);
-x = zeros(n, 1);
-
-% Backward substitution
-for i = n:-1:1
-    x(i) = (y(i) - U(i, i+1:n) * x(i+1:n)) / U(i, i);
 end
 end

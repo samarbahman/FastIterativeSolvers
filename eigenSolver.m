@@ -6,7 +6,7 @@ close all;
 %% Power Iteration Algorithm
 
 % Read the MCSR matrix data from a text file
-T = readtable('cg_test_msr.txt');
+T = readtable('power_test_msr.txt');
 T = table2cell(T);
 data = cell2mat(T);
 
@@ -30,6 +30,7 @@ slg.Color = "cyan";
 grid on
 xlabel('Number of Iterations','Interpreter','latex')
 ylabel('$|\lambda_{(k)} - \lambda_{(k-1)}|$','Interpreter','latex')
+title('Power Iteration Method','Interpreter','latex')
 %% Lanczos Algorithm
 m = [30, 50, 75, 100];
 tol = [1e-2, 1e-4, 1e-6, 1e-10];
@@ -45,9 +46,6 @@ for i = 1:numel(m)
     % Finish recording the runtime
     toc;
 
-    % Save Data
-    save(['data_' num2str(i) '.mat'],'lambd_lanczos', 'e_lanczos')
-
     % Plot
     itnum = 1:1:numel(e_lanczos) - 1;
     error = e_lanczos(2:end);
@@ -59,7 +57,7 @@ for i = 1:numel(m)
     grid minor
     xlabel('Number of Iterations','Interpreter','latex')
     ylabel('$|\lambda_{(k)} - \lambda_{(k-1)}|$','Interpreter','latex')
-    title(['$ m = $' num2str(m(i))],'Interpreter','latex')
+    title(['Lanczos Method for $ m = $' num2str(m(i))],'Interpreter','latex')
     hold off
 
 end
@@ -90,7 +88,7 @@ n = data(1,1);
 q = ones(n,1) / sqrt(n);
 while e > tol
     z = mcsr(data,q);
-    q = z / l2Norm(z);
+    q = z / norm(z);
     lambda(k) = q' * mcsr(data,q);
     e(k) = abs(lambda(k) - lambda(k - 1));
     k = k + 1;
@@ -106,7 +104,7 @@ for i = 2:k + 1
     w = mcsr(data,v(:,i)) - bet(i - 1) * v(:,i - 1);  
     alph(i) = v(:,i)' * w;
     w = w - alph(i) * v(:,i);
-    bet(i) = l2Norm(w);
+    bet(i) = norm(w);
     v(:,i + 1) = w / bet(i);
 end
 T = zeros(k,k);
@@ -119,24 +117,9 @@ j = 2;
 q = ones(k,1)/sqrt(k);
 while e > tol
     z = T * q;
-    q = z/l2Norm(z);
+    q = z / norm(z);
     lambd(j) = q' * (T * q);
     e(j) = abs(lambd(j) - lambd(j - 1));
     j = j + 1;
 end
-end
-%% Dot Product Function
-function dotProduct = dotProduct(vec1,vec2)
-if size(vec1,1) == size(vec2,1)
-    for i = 1:size(vec1,1)
-        product(i) = vec1(i)*vec2(i);
-    end
-else
-    disp("Dimension Mismatch")
-end
-dotProduct = sum(product);
-end
-%% Euclidean Norm Function 
-function l2Norm = l2Norm(vec)
-l2Norm = sqrt(dotProduct(vec,vec));
 end
